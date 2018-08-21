@@ -32,35 +32,35 @@ public abstract class JarSigner {
 
 	/**
 	 * Returns the path to the jar signer binary
-	 * 
+	 *
 	 * @return the path to the jar signer binary
 	 */
 	abstract Path jarSigner();
 
 	/**
 	 * Returns the path to the keystore file
-	 * 
+	 *
 	 * @return the path to the keystore file
 	 */
 	abstract Path keystore();
 
 	/**
 	 * Returns the path to the file storing the keystore password
-	 * 
+	 *
 	 * @return the path to the file storing the keystore password
 	 */
 	abstract String keystorePassword();
 
 	/**
 	 * Returns the alias name of the key in the keystore
-	 * 
+	 *
 	 * @return the alias name of the key in the keystore
 	 */
 	abstract String keystoreAlias();
 
 	/**
 	 * Returns the timestamping authority URI
-	 * 
+	 *
 	 * @return the timestamping authority URI
 	 */
 	abstract URI timestampingAuthority();
@@ -69,24 +69,66 @@ public abstract class JarSigner {
 	abstract int httpProxyPort();
 	abstract String httpsProxyHost();
 	abstract int httpsProxyPort();
-	
+
 	/**
 	 * Returns the executor that will execute the native command
-	 * 
+	 *
 	 * @return the executor that will execute the native command
 	 */
 	abstract ProcessExecutor processExecutor();
 
 	/**
 	 * Returns the timeout of the jarsigner command
-	 * 
+	 *
 	 * @return the timeout of the jarsigner command
 	 */
 	abstract long timeout();
-	
+
+	/**
+	 * Returns the digest algorithm of the jarsigner command
+	 *
+	 * @return the digest algorithm of the jarsigner command
+	 */
+	abstract String digestalg();
+
+	/**
+	 * Returns the signature algorithm of the jarsigner command
+	 *
+	 * @return the signature algorithm of the jarsigner command
+	 */
+	abstract String sigalg();
+
+	/**
+	 * Returns the provider of the jarsigner command
+	 *
+	 * @return the provider of the jarsigner command
+	 */
+	abstract String provider();
+
+	/**
+	 * Returns the providerArg of the jarsigner command
+	 *
+	 * @return the providerArg of the jarsigner command
+	 */
+	abstract String providerArg();
+
+	/**
+	 * Returns the storetype of the jarsigner command
+	 *
+	 * @return the storetype of the jarsigner command
+	 */
+	abstract String keystoreType();
+
+	/**
+	 * Returns the certificate chain to the jarsigner command
+	 *
+	 * @return the certificate chain to the jarsigner command
+	 */
+	abstract String certchain();
+
 	/**
 	 * Creates and returns a new builder for this class.
-	 * 
+	 *
 	 * @return a new builder for this class.
 	 */
 	public static Builder builder() {
@@ -96,73 +138,80 @@ public abstract class JarSigner {
 			.httpsProxyHost("")
 			.httpsProxyPort(0);
 	}
-	
+
 	/**
 	 * A builder of JarSigner.
 	 */
 	@AutoValue.Builder
 	public static abstract class Builder {
-	
+
 		/**
 		 * Sets the path to the jarsigner command.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder jarSigner(Path jarSigner);
-		
+
 		/**
 		 * Sets the path to the keystore file.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder keystore(Path keystore);
-		
+
 		/**
 		 * Sets the path to the file storing the password of the keystore.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder keystorePassword(String keystorePassword);
-		
+
 		/**
 		 * Sets the alias name of the key in the keystore.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder keystoreAlias(String keystoreAlias);
-		
+
 		/**
 		 * Sets the URI of the timestamping authority used by jarsigner.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder timestampingAuthority(URI timeStampingAuthority);
-		
+
 		/**
-		 * Sets the process executor that will execute the native jarsigner command. 
-		 * 
+		 * Sets the process executor that will execute the native jarsigner command.
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder processExecutor(ProcessExecutor executor);
-		
+
 		/**
 		 * Sets the timeout before which the jarsigner process will be killed.
-		 * 
+		 *
 		 * @return this builder for daisy-chaining.
 		 */
 		public abstract Builder timeout(long timeout);
-		
+
 		public abstract Builder httpProxyHost(String proxyHost);
 		public abstract Builder httpProxyPort(int proxyPort);
 		public abstract Builder httpsProxyHost(String proxyHost);
 		public abstract Builder httpsProxyPort(int proxyPort);
-		
+
 		abstract JarSigner autoBuild();
-		
+
+		public abstract Builder digestalg(String digestalg);
+		public abstract Builder sigalg(String sigalg);
+		public abstract Builder provider(String provider);
+		public abstract Builder providerArg(String providerArg);
+		public abstract Builder keystoreType(String keystoreType);
+		public abstract Builder certchain(String certchain);
+
 		/**
 		 * Creates and returns a new JarSigner object with the state of this
 		 * builder.
-		 * 
+		 *
 		 * @return a new JarSigner object with the state of this builder.
 		 */
 		public JarSigner build() {
@@ -180,7 +229,7 @@ public abstract class JarSigner {
 
 	/**
 	 * Sign the given jar file with the configured jarsigner command.
-	 * 
+	 *
 	 * @param jar
 	 *            the jar to be sign
 	 * @return the path to the signed jar file (the same as the one given in
@@ -199,10 +248,10 @@ public abstract class JarSigner {
 		}
 		return jar;
 	}
-	
+
 	/**
 	 * Creates the jarsigner command with proper options.
-	 * 
+	 *
 	 * @param jar
 	 *            the path of the file to be signed.
 	 * @return a list of string composing the command (see
@@ -210,11 +259,11 @@ public abstract class JarSigner {
 	 */
 	private ImmutableList<String> createCommand(Path jar) {
 		ImmutableList.Builder<String> command = ImmutableList.<String>builder().add(jarSigner().toString());
-		
+
 		if (!Strings.isNullOrEmpty(httpProxyHost())) {
 			command.add("-J-Dhttp.proxyHost=" + httpProxyHost()).add("-J-Dhttp.proxyPort=" + httpProxyPort());
 		}
-		
+
 		if (!Strings.isNullOrEmpty(httpProxyHost())) {
 			command.add("-J-Dhttps.proxyHost=" + httpsProxyHost()).add("-J-Dhttps.proxyPort=" + httpsProxyPort());
 		}
@@ -222,10 +271,27 @@ public abstract class JarSigner {
 		command.add("-tsa", timestampingAuthority().toString())
 			.add("-verbose")
 			.add("-keystore", keystore().toString())
-			.add("-storepass", keystorePassword())
-			.add(jar.toString())
-			.add(keystoreAlias());
-		
+			.add("-storepass", keystorePassword());
+
+		if (!Strings.isNullOrEmpty(keystoreType())) {
+			command.add("-storetype", keystoreType());
+		}
+		if (!Strings.isNullOrEmpty(provider())) {
+			command.add("-provider", provider());
+		}
+		if (!Strings.isNullOrEmpty(providerArg())) {
+			command.add("-providerArg", providerArg());
+		}
+		if (!Strings.isNullOrEmpty(sigalg())) {
+			command.add("-sigalg", sigalg());
+		}
+		if (!Strings.isNullOrEmpty(digestalg())) {
+			command.add("-digestalg", digestalg());
+		}
+		if (!Strings.isNullOrEmpty(certchain())) {
+			command.add("-certchain", certchain());
+		}
+		command.add(jar.toString()).add(keystoreAlias());
 		return command.build();
 	}
 }
