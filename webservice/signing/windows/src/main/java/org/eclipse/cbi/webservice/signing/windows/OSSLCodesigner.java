@@ -27,12 +27,13 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 @AutoValue
-public abstract class OSSLCodesigner {
+public abstract class OSSLCodesigner implements Codesigner {
 
 	private static final String TEMP_FILE_PREFIX = OSSLCodesigner.class.getSimpleName() + "-";
 	private static Logger logger = LoggerFactory.getLogger(OSSLCodesigner.class);;
 
-	public Path sign(Path file) throws IOException {
+	@Override
+	public void sign(Path file) throws IOException {
 		Path out = null;
 		try {
 			out = Files.createTempFile(tempFolder(), TEMP_FILE_PREFIX, file.getFileName().toString());
@@ -54,9 +55,8 @@ public abstract class OSSLCodesigner {
 				}
 			}
 		}
-		return file;
 	}
-	
+
 	private ImmutableList<String> createCommand(Path in, Path out) {
 		return ImmutableList.<String>builder()
 				.add(osslsigncode().toString())
@@ -69,11 +69,11 @@ public abstract class OSSLCodesigner {
 				.add("-out", out.toString())
 				.build();
 	}
-	
+
 	public static Builder builder() {
 		return new AutoValue_OSSLCodesigner.Builder();
 	}
-	
+
 	abstract Path osslsigncode();
 	abstract long timeout();
 	abstract Path pkcs12();
@@ -83,7 +83,7 @@ public abstract class OSSLCodesigner {
 	abstract URI timestampURI();
 	abstract Path tempFolder();
 	abstract ProcessExecutor processExecutor();
-	
+
 	@AutoValue.Builder
 	public static abstract class Builder {
 		public abstract OSSLCodesigner build();
@@ -105,7 +105,7 @@ public abstract class OSSLCodesigner {
 		public abstract Builder tempFolder(Path tempFolder);
 
 		public abstract Builder processExecutor(ProcessExecutor processExecutor);
-		
-		
+
+
 	}
 }

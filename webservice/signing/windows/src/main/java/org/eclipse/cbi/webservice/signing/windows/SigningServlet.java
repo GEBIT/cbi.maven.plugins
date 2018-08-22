@@ -43,7 +43,7 @@ public abstract class SigningServlet extends HttpServlet {
 		ResponseFacade responseFacade = ResponseFacade.builder()
 				.servletResponse(resp)
 				.session(req.getSession()).build();
-		
+
 		try (RequestFacade requestFacade = requestFacadeBuilder().request(req).build()) {
 			doSign(requestFacade, responseFacade);
 		} catch (Exception e) {
@@ -55,9 +55,9 @@ public abstract class SigningServlet extends HttpServlet {
 		if (requestFacade.hasPart(FILE_PART_NAME)) {
 			String submittedFileName = requestFacade.getSubmittedFileName(FILE_PART_NAME).get();
 			if (submittedFileName.endsWith(".exe")) {
-				Path unsignedExe = requestFacade.getPartPath(FILE_PART_NAME, TEMP_FILE_PREFIX).get();
-				Path signedFile = osslCodesigner().sign(unsignedExe);
-				responseFacade.replyWithFile(PORTABLE_EXECUTABLE_MEDIA_TYPE, submittedFileName, signedFile);
+				Path executable = requestFacade.getPartPath(FILE_PART_NAME, TEMP_FILE_PREFIX).get();
+				codesigner().sign(executable);
+				responseFacade.replyWithFile(PORTABLE_EXECUTABLE_MEDIA_TYPE, submittedFileName, executable);
 			} else {
 				responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "Submitted '" + FILE_PART_NAME + "' '" + submittedFileName + "' must ends with '.exe' ");
 			}
@@ -65,19 +65,19 @@ public abstract class SigningServlet extends HttpServlet {
 			responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "POST request must contain a part named '" + FILE_PART_NAME + "'");
 		}
 	}
-	
+
 	public static Builder builder() {
 		return new AutoValue_SigningServlet.Builder();
 	}
-	
-	abstract OSSLCodesigner osslCodesigner();
+
+	abstract Codesigner codesigner();
 	abstract RequestFacade.Builder requestFacadeBuilder();
-	
+
 	@AutoValue.Builder
 	public static abstract class Builder {
 		public abstract SigningServlet build();
 
-		public abstract Builder osslCodesigner(OSSLCodesigner codesigner);
+		public abstract Builder codesigner(Codesigner codesigner);
 
 		public abstract Builder requestFacadeBuilder(RequestFacade.Builder builder);
 	}
