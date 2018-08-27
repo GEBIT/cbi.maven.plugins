@@ -87,12 +87,7 @@
 
     <!-- maven-plugins submodules If you add something in there, think about
     also adding it to maven-plugins/pom.xml -->
-    <module>maven-plugins/common</module>
-    <module>maven-plugins/eclipse-cbi-plugin</module>
-    <module>maven-plugins/eclipse-jarsigner-plugin</module>
-    <module>maven-plugins/eclipse-macsigner-plugin</module>
-    <module>maven-plugins/eclipse-winsigner-plugin</module>
-    <module>maven-plugins/eclipse-dmg-packager</module>
+    <module>maven-plugins</module>
 
     <!-- webservices submodules. If you add something in there, think about
     also adding it to webservice/pom.xml -->

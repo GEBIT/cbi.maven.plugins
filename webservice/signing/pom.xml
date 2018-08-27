@@ -28,6 +28,12 @@
     </plugins>
   </build>
 
+  <modules>
+  	<module>jar</module>
+  	<module>windows</module>
+  	<module>macosx</module>
+  </modules>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.cbi</groupId>

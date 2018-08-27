@@ -16,10 +16,7 @@
     <!-- If you add something in there, think about also add it to ../pom.xml -->
     <module>common</module>
     <module>signing</module>
-    <module>packaging/dmg</module>
-    <module>signing/jar</module>
-    <module>signing/windows</module>
-    <module>signing/macosx</module>
+    <module>packaging</module>
   </modules>
 
   <profiles>
