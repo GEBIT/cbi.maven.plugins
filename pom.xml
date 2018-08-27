@@ -4,7 +4,7 @@
 
   <groupId>org.eclipse.cbi</groupId>
   <artifactId>cbi-parent</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <url>http://wiki.eclipse.org/CBI</url>
@@ -225,7 +225,7 @@
             <dependency>
               <groupId>org.eclipse.cbi</groupId>
               <artifactId>checkstyle</artifactId>
-              <version>1.0.0-SNAPSHOT</version>
+              <version>1.2.0-SNAPSHOT</version>
             </dependency>
             <dependency> <!-- this one is necessary to run checkstyle:2.15 on maven 3.3.x, remove when upgrade to 2.16 (not released as of today) -->
                 <groupId>org.slf4j</groupId>
@@ -319,7 +319,7 @@
       <dependency>
         <groupId>org.eclipse.cbi</groupId>
         <artifactId>checkstyle</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.2.0-SNAPSHOT</version>
       </dependency>
 
       <!-- Dependency scope: test -->
