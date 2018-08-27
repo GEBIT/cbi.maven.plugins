@@ -13,9 +13,9 @@
   </parent>
 
   <modules>
-    <module>../common</module>
     <!-- If you add something in there, think about also add it to ../pom.xml -->
     <module>common</module>
+    <module>signing</module>
     <module>packaging/dmg</module>
     <module>signing/jar</module>
     <module>signing/windows</module>
@@ -37,7 +37,7 @@
   </profiles>
 
   <properties>
-    <jetty-version>9.2.10.v20150310</jetty-version>
+    <jetty-version>9.4.8.v20180619</jetty-version>
     <log4j-version>2.3</log4j-version>
   </properties>
 
