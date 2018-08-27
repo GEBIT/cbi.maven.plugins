@@ -7,7 +7,7 @@
  *
  * Contributors:
  *   Caroline McQuatt, Mike Lim - initial implementation
- *   Mikael Barbero - refactoring with WindowsExeSigner 
+ *   Mikael Barbero - refactoring with WindowsExeSigner
  *******************************************************************************/
 package org.eclipse.cbi.maven.plugins.winsigner;
 
@@ -38,7 +38,7 @@ import org.eclipse.cbi.maven.common.MavenLogger;
  * @description runs the eclipse signing process
  */
 public class SignMojo extends AbstractMojo {
-	
+
 	private static final String ECLIPSEC_EXE = "eclipsec.exe";
 
 	private static final String ECLIPSE_EXE = "eclipse.exe";
@@ -74,7 +74,7 @@ public class SignMojo extends AbstractMojo {
      * @parameter property="project.build.directory"
      * @readonly
      * @since 1.0.4
-     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead. 
+     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead.
      */
     @SuppressWarnings("unused")
 	@Deprecated
@@ -160,17 +160,28 @@ public class SignMojo extends AbstractMojo {
      */
     private int retryTimer;
 
+    /**
+     * Skips the execution of this plugin
+     *
+     * @parameter property="cbi.winsigner.skip" default-value="false"
+     * @since 1.2.0
+     */
+    private boolean skip;
 
     @Override
     public void execute() throws MojoExecutionException {
-    	
+        if (skip) {
+            getLog().info("Skipping executable signing");
+            return;
+        }
+
     	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()));
     	WindowsExeSigner.Builder winExeSignerBuilder = WindowsExeSigner.builder(signer).logOn(getLog()).maxRetry(retryLimit).waitBeforeRetry(retryTimer, TimeUnit.SECONDS);
     	if (continueOnFail) {
     		winExeSignerBuilder.continueOnFail();
     	}
     	WindowsExeSigner exeSigner = winExeSignerBuilder.build();
-    	
+
     	if (signFiles != null && signFiles.length != 0) {
     		//exe paths are configured
     		Set<Path> exePaths = new LinkedHashSet<>();
@@ -178,7 +189,7 @@ public class SignMojo extends AbstractMojo {
         		exePaths.add(FileSystems.getDefault().getPath(path));
         	}
         	exeSigner.signExecutables(exePaths);
-    	} else { 
+    	} else {
     		//perform search
     		Set<PathMatcher> pathMatchers = getPathMatchers(FileSystems.getDefault(), fileNames, getLog());
     		exeSigner.signExecutables(FileSystems.getDefault().getPath(baseSearchDir), pathMatchers);
@@ -187,7 +198,7 @@ public class SignMojo extends AbstractMojo {
 
     static Set<PathMatcher> getPathMatchers(FileSystem fs, Set<String> fileNames, Log log) {
 		final Set<PathMatcher> pathMatchers = new LinkedHashSet<>();
-		
+
 		if (fileNames == null || fileNames.isEmpty()) {
 			pathMatchers.add(fs.getPathMatcher("glob:**" + fs.getSeparator() + ECLIPSE_EXE));
 			pathMatchers.add(fs.getPathMatcher("glob:**" + fs.getSeparator() + ECLIPSEC_EXE));
