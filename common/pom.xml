@@ -19,7 +19,6 @@
   </parent>
 
   <artifactId>cbi-common</artifactId>
-  <version>${cbi-common-version}</version>
 
   <dependencies>
     <dependency>
