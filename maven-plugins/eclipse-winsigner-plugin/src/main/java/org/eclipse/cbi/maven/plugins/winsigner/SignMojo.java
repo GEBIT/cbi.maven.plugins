@@ -15,6 +15,7 @@ import java.io.File;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.LinkedHashSet;
@@ -192,7 +193,12 @@ public class SignMojo extends AbstractMojo {
     	} else {
     		//perform search
     		Set<PathMatcher> pathMatchers = getPathMatchers(FileSystems.getDefault(), fileNames, getLog());
-    		exeSigner.signExecutables(FileSystems.getDefault().getPath(baseSearchDir), pathMatchers);
+    		Path baseSearchDirPath = FileSystems.getDefault().getPath(baseSearchDir);
+    		if (!Files.exists(baseSearchDirPath)) {
+    			getLog().debug("Basedir " + baseSearchDir + " does not exist");
+    			return;
+    		}
+    		exeSigner.signExecutables(baseSearchDirPath, pathMatchers);
     	}
     }
 
