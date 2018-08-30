@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2012, 2015 Eclipse Foundation and others. 
+ * Copyright (c) 2012, 2015 Eclipse Foundation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
- * Contributors: 
- *   Eclipse Foundation - initial API and implementation 
+ * Contributors:
+ *   Eclipse Foundation - initial API and implementation
  *   Thanh Ha (Eclipse Foundation) - Add support for signing inner jars
  *   Mikael Barbero - Use of "try with resource"
  *******************************************************************************/
@@ -19,9 +19,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.settings.Server;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.eclipse.cbi.common.http.ApacheHttpClientPostFileSender;
 import org.eclipse.cbi.common.http.HttpPostFileSender;
 import org.eclipse.cbi.maven.common.MavenLogger;
@@ -63,7 +68,7 @@ public class SignMojo extends AbstractMojo {
      * <p>
      * <b>Configuration via Maven commandline</b>
      * </p>
-     * 
+     *
      * <pre>
      * -Dcbi.jarsigner.signerUrl=http://localhost/sign.php
      * </pre>
@@ -71,7 +76,7 @@ public class SignMojo extends AbstractMojo {
      * <p>
      * <b>Configuration via pom.xml</b>
      * </p>
-     * 
+     *
      * <pre>
      * {@code
      * <configuration>
@@ -92,7 +97,7 @@ public class SignMojo extends AbstractMojo {
      *
      * @parameter property="project.build.directory"
      * @readonly
-     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead. 
+     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead.
      */
     @SuppressWarnings("unused")
 	@Deprecated
@@ -112,7 +117,7 @@ public class SignMojo extends AbstractMojo {
      * <p>
      * <b>Configuration via Maven commandline</b>
      * </p>
-     * 
+     *
      * <pre>
      * -DcontinueOnFail=true
      * </pre>
@@ -120,7 +125,7 @@ public class SignMojo extends AbstractMojo {
      * <p>
      * <b>Configuration via pom.xml</b>
      * </p>
-     * 
+     *
      * <pre>
      * {@code
      * <configuration>
@@ -156,7 +161,7 @@ public class SignMojo extends AbstractMojo {
      * <p>
      * <b>Configuration via pom.xml</b>
      * </p>
-     * 
+     *
      * <pre>
      * {@code
      * <configuration>
@@ -171,12 +176,30 @@ public class SignMojo extends AbstractMojo {
     private boolean excludeInnerJars;
 
     /**
+     * Name of configured credentials to use.
+     * @parameter property="cbi.serverId"
+     * @since 1.2.0
+     */
+
+    private String serverId;
+    /**
+     * @parameter default-value="${session}"
+     * @readonly
+     */
+    private MavenSession session;
+
+    /**
+     * @component role="org.apache.maven.settings.crypto.SettingsDecrypter"
+     */
+    private SettingsDecrypter settingsDecrypter;
+
+    /**
      * Project types which this plugin supports
      *
      * <p>
      * <b>Default Types Supported</b>
      * </p>
-     * 
+     *
      * <pre>
      * jar                 : standard jars
      * bundle              : felix/bnd bundles
@@ -235,22 +258,42 @@ public class SignMojo extends AbstractMojo {
      * Creates and returns the {@link JarSigner} according to the injected Mojo parameter.
      * @return the {@link JarSigner} according to the injected Mojo parameter.
      */
-	private JarSigner createJarSigner() {
-		URI signerURI = URI.create(signerUrl);
-		final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(signerURI, new MavenLogger(getLog()));
+    private JarSigner createJarSigner() throws MojoExecutionException {
+        URI signerURI = URI.create(signerUrl);
+
+        String user = null;
+        String password = null;
+        if (serverId != null) {
+            Server server = session.getSettings().getServer(serverId);
+            if (server == null) {
+                throw new MojoExecutionException("Cannot find server settings for '" + serverId + "'.");
+            }
+
+            // decrypt password
+            SettingsDecryptionResult result = settingsDecrypter.decrypt( new DefaultSettingsDecryptionRequest( server ) );
+            server = result.getServer();
+
+            user = server.getUsername();
+            password = server.getPassword();
+            if (user == null || password == null) {
+                throw new MojoExecutionException("Server settings for '" + serverId + "' has no user and/or password.");
+            }
+        }
+
+        final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(signerURI, new MavenLogger(getLog()), user, password);
         JarSigner.Builder jarSignerBuilder = JarSigner.builder(signer);
         jarSignerBuilder.logOn(getLog()).maxRetry(retryLimit).waitBeforeRetry(retryTimer, TimeUnit.SECONDS);
-        
+
         if (continueOnFail) {
         	jarSignerBuilder.continueOnFail();
         }
-        
+
         if (excludeInnerJars) {
         	jarSignerBuilder.maxDepth(0);
         } else {
         	jarSignerBuilder.maxDepth(1);
         }
-        
+
         return jarSignerBuilder.build();
 	}
 }

@@ -21,9 +21,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.settings.Server;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.eclipse.cbi.common.http.ApacheHttpClientPostFileSender;
 import org.eclipse.cbi.common.http.HttpPostFileSender;
 import org.eclipse.cbi.maven.common.MavenLogger;
@@ -40,7 +45,7 @@ import org.eclipse.cbi.maven.common.MavenLogger;
 public class SignMojo extends AbstractMojo {
 
 	private static final String DOT_APP = ".app";
-	
+
 	/**
      * The signing service URL for signing Mac binaries
      *
@@ -73,7 +78,7 @@ public class SignMojo extends AbstractMojo {
      * @parameter property="project.build.directory"
      * @readonly
      * @since 1.0.4
-     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead. 
+     * @deprecated not used anymore. Use {@code java.io.tmpdir} property instead.
      */
     @SuppressWarnings("unused")
 	@Deprecated
@@ -157,15 +162,52 @@ public class SignMojo extends AbstractMojo {
      */
     private int retryTimer;
 
+    /**
+     * Name of configured credentials to use.
+     * @parameter property="cbi.serverId"
+     * @since 1.2.0
+     */
+
+    private String serverId;
+    /**
+     * @parameter default-value="${session}"
+     * @readonly
+     */
+    private MavenSession session;
+
+    /**
+     * @component role="org.apache.maven.settings.crypto.SettingsDecrypter"
+     */
+    private SettingsDecrypter settingsDecrypter;
+
     @Override
     public void execute() throws MojoExecutionException {
-    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()));
+        String user = null;
+        String password = null;
+        if (serverId != null) {
+            Server server = session.getSettings().getServer(serverId);
+            if (server == null) {
+                throw new MojoExecutionException("Cannot find server settings for '" + serverId + "'.");
+            }
+
+            // decrypt password
+            SettingsDecryptionResult result = settingsDecrypter.decrypt( new DefaultSettingsDecryptionRequest( server ) );
+            server = result.getServer();
+
+            user = server.getUsername();
+            password = server.getPassword();
+            if (user == null || password == null) {
+                throw new MojoExecutionException("Server settings for '" + serverId + "' has no user and/or password.");
+            }
+        }
+
+    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()), user, password);
     	OSXAppSigner.Builder appSignerBuilder = OSXAppSigner.builder(signer).logOn(getLog()).maxRetry(retryLimit).waitBeforeRetry(retryTimer, TimeUnit.SECONDS);
     	if (continueOnFail) {
     		appSignerBuilder.continueOnFail();
     	}
     	OSXAppSigner osxAppSigner = appSignerBuilder.build();
-    	
+
         if (signFiles != null && !signFiles.isEmpty()) {
         	//app paths are configured
         	Set<Path> filesToSign = new LinkedHashSet<>();
@@ -173,7 +215,7 @@ public class SignMojo extends AbstractMojo {
 				filesToSign.add(FileSystems.getDefault().getPath(pathString));
 			}
             osxAppSigner.signApplications(filesToSign);
-        } else { 
+        } else {
         	//perform search
         	osxAppSigner.signApplications(FileSystems.getDefault().getPath(baseSearchDir), getPathMatchers(FileSystems.getDefault(), fileNames, getLog()));
         }
@@ -181,7 +223,7 @@ public class SignMojo extends AbstractMojo {
 
 	static Set<PathMatcher> getPathMatchers(FileSystem fs, Set<String> fileNames, Log log) {
 		final Set<PathMatcher> pathMatchers = new LinkedHashSet<>();
-		
+
 		if (fileNames == null || fileNames.isEmpty()) {
 			pathMatchers.add(fs.getPathMatcher("glob:**" + fs.getSeparator() + "Eclipse.app"));
 		} else {

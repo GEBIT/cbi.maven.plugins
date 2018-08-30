@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.http.entity.ContentType;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.cbi.common.http.ApacheHttpClientPostFileSender;
 import org.eclipse.cbi.common.test.util.SampleFilesGenerators;
 import org.eclipse.jetty.http.HttpMethod;
@@ -40,13 +41,13 @@ public class ApacheHttpClientSignerTest {
 	public static void beforeClass() {
 		Log.setLog(new NullJettyLogger());
 	}
-	
+
 	@Test(expected=IllegalArgumentException.class)
-	public void testSignNullFile() throws IOException {
+	public void testSignNullFile() throws IOException, MojoExecutionException {
 		ApacheHttpClientPostFileSender signer = createLocalSigner("localhost", 8080);
 		signer.post(null, null);
 	}
-	
+
 	@Test(expected=IllegalArgumentException.class)
 	public void testSignNonExistingFile() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -55,7 +56,7 @@ public class ApacheHttpClientSignerTest {
 			signer.post(path, "");
 		}
 	}
-	
+
 	@Test(expected=IllegalArgumentException.class)
 	public void testSignDirectory() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -65,7 +66,7 @@ public class ApacheHttpClientSignerTest {
 			signer.post(path, "file");
 		}
 	}
-	
+
 	public void testSignOfflineServer() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
 			ApacheHttpClientPostFileSender signer = createLocalSigner("qwerty", 8080);
@@ -73,7 +74,7 @@ public class ApacheHttpClientSignerTest {
 			assertFalse(signer.post(path, "file"));
 		}
 	}
-	
+
 	@Test(expected=IllegalArgumentException.class)
 	public void testRetryNegativeTimes() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -82,7 +83,7 @@ public class ApacheHttpClientSignerTest {
 			signer.post(path, "file", -1, 0, TimeUnit.SECONDS);
 		}
 	}
-	
+
 	@Test(expected=IllegalArgumentException.class)
 	public void testRetryNegativeInterval() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -91,7 +92,7 @@ public class ApacheHttpClientSignerTest {
 			signer.post(path, "file", 5, -4, TimeUnit.SECONDS);
 		}
 	}
-	
+
 	@Test(expected=NullPointerException.class)
 	public void testRetryNullUnit() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -100,7 +101,7 @@ public class ApacheHttpClientSignerTest {
 			signer.post(path, "file", 5, 4, null);
 		}
 	}
-	
+
 	@Test
 	public void testSignStandardFile() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -117,7 +118,7 @@ public class ApacheHttpClientSignerTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void testSignRequest() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -134,7 +135,7 @@ public class ApacheHttpClientSignerTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void testServerError() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -154,7 +155,7 @@ public class ApacheHttpClientSignerTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void testRetryOnServerError() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -174,7 +175,7 @@ public class ApacheHttpClientSignerTest {
 			}
 		}
 	}
-	
+
 	@Test(expected=IOException.class)
 	public void testRetryOnException() throws Exception {
 		try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
@@ -189,9 +190,9 @@ public class ApacheHttpClientSignerTest {
 	}
 
 	private static ApacheHttpClientPostFileSender createLocalSigner(String host, int port) {
-		return new ApacheHttpClientPostFileSender(URI.create("http://"+host+":"+port+"/signing-service"), new NullLog());
+		return new ApacheHttpClientPostFileSender(URI.create("http://"+host+":"+port+"/signing-service"), new NullLog(), null, null);
 	}
-	
+
 	private static Server createSigningServer(Handler handler) throws Exception {
 		Server server = new Server(0);
         server.setHandler(handler);
@@ -226,14 +227,14 @@ public class ApacheHttpClientSignerTest {
 			}
 		};
 	}
-	
+
 	private static ServiceUnavailableHandler createServiceUnavailableHandler() {
 		return new ServiceUnavailableHandler();
 	}
 
 	private static final class ServiceUnavailableHandler extends AbstractHandler {
 		int requestCount;
-	
+
 		@Override
 		public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException {
 			requestCount++;
@@ -241,7 +242,7 @@ public class ApacheHttpClientSignerTest {
 			response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
 			response.getWriter().print("Some more explanations about the error from the server!");
 		}
-	
+
 		public int getRequestCount() {
 			return requestCount;
 		}

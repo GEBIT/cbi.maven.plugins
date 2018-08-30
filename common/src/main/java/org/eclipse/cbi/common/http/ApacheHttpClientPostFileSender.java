@@ -24,23 +24,34 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.AuthCache;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.InputStreamBody;
+import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.client.BasicAuthCache;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.protocol.HttpContext;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.plexus.util.IOUtil;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 /**
- * A class that send a file to as a post request to an HTTP server adn replace 
+ * A class that send a file to as a post request to an HTTP server adn replace
  * the send file with the reply.
  */
 public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
@@ -56,31 +67,43 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 	private final Logger log;
 
 	/**
+	 * Username to use for HTTP Basic Auth
+	 */
+	private final String user;
+
+	/**
+	 * Passwrod to use for HTTP Basic Auth
+	 */
+	private final String password;
+
+	/**
 	 * Default constructor.
-	 * 
+	 *
 	 * @param serverURI
 	 *            the URI of the server where the file will be send.
 	 * @param log
 	 *            the log for providing {@code DEBUG} feedback about the signing process
 	 */
-	public ApacheHttpClientPostFileSender(URI serverURI, Logger log) {
+	public ApacheHttpClientPostFileSender(URI serverURI, Logger log, String user, String password) {
 		this.serverURI = Objects.requireNonNull(serverURI);
 		this.log = Objects.requireNonNull(log);
+		this.user = user;
+		this.password = password;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public boolean post(Path path, String partName) throws IOException {
-		return post(path, partName, 0, 0, TimeUnit.SECONDS); 
+	public boolean post(Path path, String partName) throws IOException, MojoExecutionException {
+		return post(path, partName, 0, 0, TimeUnit.SECONDS);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public boolean post(Path path, String partName, int maxRetries, int retryInterval, TimeUnit unit) throws IOException {
+	public boolean post(Path path, String partName, int maxRetries, int retryInterval, TimeUnit unit) throws IOException, MojoExecutionException {
 		if (path == null || !Files.exists(path) || !Files.isRegularFile(path)) {
 			throw new IllegalArgumentException("'source' must be an existing regular file.");
 		}
@@ -88,10 +111,25 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 		checkPositive(maxRetries, "'maxRetries' must be positive");
 		checkPositive(retryInterval, "'retryInterval' must be positive");
 		Objects.requireNonNull(unit, "'unit' must not be null");
-		
-		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+
+		CredentialsProvider credentialsProvider = null;
+		HttpClientContext context = HttpClientContext.create();
+		if (user != null) {
+			credentialsProvider = new BasicCredentialsProvider();
+			credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(user, password));
+
+			AuthCache authCache = new BasicAuthCache();
+			authCache.put(new HttpHost(serverURI.getHost(), serverURI.getPort(), "http"), new BasicScheme());
+			authCache.put(new HttpHost(serverURI.getHost(), serverURI.getPort(), "https"), new BasicScheme());
+
+			// Add AuthCache to the execution context
+			context.setCredentialsProvider(credentialsProvider);
+			context.setAuthCache(authCache);
+		}
+
+		try (CloseableHttpClient httpClient = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build()) {
 			boolean sucessfullySigned = false;
-			
+
 			Exception lastThrownException = null;
 			for (int retryCount = 0; !sucessfullySigned && retryCount <= maxRetries; retryCount++) {
 				if (!sucessfullySigned && retryCount > 0) {
@@ -102,20 +140,23 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 						logDebug("Signing thread has been interrupted", e);
 						Thread.currentThread().interrupt();
 					}
-				} 
-				
+				}
+
 				try {
-					sucessfullySigned = sign(path, partName, httpClient);
+					sucessfullySigned = sign(path, partName, httpClient, context);
+				} catch (MojoExecutionException e) {
+					logDebug("Error occured while communicating with '"+ serverURI +"'", e);
+					throw e;
 				} catch (Exception e) {
 					lastThrownException = e;
 					logDebug("Error occured while communicating with '"+ serverURI +"'", e);
 				}
 			}
-			
+
 			if (lastThrownException != null) {
 				propagate(lastThrownException);
 			}
-			
+
 			return sucessfullySigned;
 		}
 	}
@@ -138,11 +179,11 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 		}
 	}
 
-	private boolean sign(Path source, String partName, CloseableHttpClient httpClient) throws IOException {
-		try (CloseableHttpResponse response = sendSigningRequest(source, partName, httpClient)) {
+	private boolean sign(Path source, String partName, CloseableHttpClient httpClient, HttpContext context) throws IOException, MojoExecutionException {
+		try (CloseableHttpResponse response = sendSigningRequest(source, partName, httpClient, context)) {
 			final StatusLine statusLine = response.getStatusLine();
 			final HttpEntity resEntity = response.getEntity();
-		
+
 			final boolean ret;
 			if (statusLine != null && statusLine.getStatusCode() == HttpStatus.SC_OK && resEntity != null) {
 				try (InputStream is = new BufferedInputStream(resEntity.getContent())) {
@@ -153,23 +194,23 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 				handleError(statusLine, resEntity);
 				ret = false;
 			}
-			
+
 			return ret;
 		}
 	}
 
 	/**
 	 * Send the given file to the server and return its response.
-	 * 
+	 *
 	 * @param filetoBeSigned
 	 *            the file to be signed.
 	 * @return the HTTP response of the server.
 	 * @throws IOException
 	 *             if something wrong happen during the request.
 	 */
-	private CloseableHttpResponse sendSigningRequest(Path filetoBeSigned, String partName, CloseableHttpClient client) throws IOException {
+	private CloseableHttpResponse sendSigningRequest(Path filetoBeSigned, String partName, CloseableHttpClient client, HttpContext context) throws IOException {
 		logDebug("Sending '" + filetoBeSigned.toString() + "' for signing to '" + serverURI + "'");
-		
+
 		HttpPost post = new HttpPost(serverURI);
 
 		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -179,21 +220,25 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 			InputStreamBody inputStreamBody = new InputStreamBody(inputStream, ContentType.DEFAULT_BINARY, filetoBeSigned.getFileName().toString());
 			builder.addPart(partName, inputStreamBody);
 			post.setEntity(builder.build());
-			return client.execute(post);
+			return client.execute(post, context);
 		}
 	}
 
 	/**
 	 * Logs the most completely possible the response from the server.
-	 * 
+	 *
 	 * @param statusLine
 	 *            the status line of the response. Can be {@code null}
 	 * @param resEntity
 	 *            the entity of the response. Can be {@code null}
 	 */
-	private void handleError(final StatusLine statusLine, final HttpEntity resEntity) {
+	private void handleError(final StatusLine statusLine, final HttpEntity resEntity) throws IOException, MojoExecutionException {
 		if (statusLine != null) {
 			logDebug("Signing server replied with: '" + statusLine.toString() + "'");
+			if (statusLine.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+				// Authentication failure
+				throw new MojoExecutionException("Authentication failed for user '" + user + "'.");
+			}
 		} else {
 			logDebug("Signing server did not replied OK.");
 		}
@@ -206,11 +251,11 @@ public class ApacheHttpClientPostFileSender implements HttpPostFileSender {
 			}
 		}
 	}
-	
+
 	private void logDebug(String msg) {
 		log.debug("[" + new Date() + "] " + msg);
 	}
-	
+
 	private void logDebug(String msg, Exception e) {
 		log.debug("[" + new Date() + "] " + msg, e);
 	}

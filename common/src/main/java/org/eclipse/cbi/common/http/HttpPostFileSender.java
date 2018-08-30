@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.plugin.MojoExecutionException;
+
 /**
  * Common interface for signers.
  */
@@ -24,7 +26,7 @@ public interface HttpPostFileSender {
 	 * for a given amount time between each time. Returns true if the file has
 	 * been successfully signed (the file is then modified), false otherwise
 	 * (the file then stay untouched).
-	 * 
+	 *
 	 * @param path
 	 *            the file to be signed (must exists and be a file).
 	 * @param partName
@@ -43,13 +45,13 @@ public interface HttpPostFileSender {
 	 *             if any IO exception occurs while signing (e.g., if the file
 	 *             not writable)
 	 */
-	boolean post(Path path, String partName, int maxRetry, int retryInterval, TimeUnit intervalUnit) throws IOException;
+	boolean post(Path path, String partName, int maxRetry, int retryInterval, TimeUnit intervalUnit) throws IOException, MojoExecutionException;
 
 	/**
 	 * Sign the given file.Returns true if the file has been successfully signed
 	 * (the file is then modified), false otherwise (the file then stay
 	 * untouched).
-	 * 
+	 *
 	 * @param path
 	 *            the file to be signed (must exists and be a file).
 	 * @param partName
@@ -59,5 +61,5 @@ public interface HttpPostFileSender {
 	 *             if any IO exception occurs while signing (e.g., if the file
 	 *             not writable)
 	 */
-	boolean post(Path path, String partName) throws IOException;
+	boolean post(Path path, String partName) throws IOException, MojoExecutionException;
 }

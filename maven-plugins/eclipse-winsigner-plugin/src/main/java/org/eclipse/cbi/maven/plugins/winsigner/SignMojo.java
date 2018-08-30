@@ -22,9 +22,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.settings.Server;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.eclipse.cbi.common.http.ApacheHttpClientPostFileSender;
 import org.eclipse.cbi.common.http.HttpPostFileSender;
 import org.eclipse.cbi.maven.common.MavenLogger;
@@ -68,6 +73,13 @@ public class SignMojo extends AbstractMojo {
      * @since 1.0.4
      */
     private String signerUrl;
+
+    /**
+     * Name of configured credentials to use.
+     * @parameter property="cbi.serverId"
+     * @since 1.2.0
+     */
+    private String serverId;
 
     /**
      * Maven build directory
@@ -169,6 +181,17 @@ public class SignMojo extends AbstractMojo {
      */
     private boolean skip;
 
+    /**
+     * @parameter default-value="${session}"
+     * @readonly
+     */
+    private MavenSession session;
+
+    /**
+     * @component role="org.apache.maven.settings.crypto.SettingsDecrypter"
+     */
+    private SettingsDecrypter settingsDecrypter;
+
     @Override
     public void execute() throws MojoExecutionException {
         if (skip) {
@@ -176,7 +199,26 @@ public class SignMojo extends AbstractMojo {
             return;
         }
 
-    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()));
+        String user = null;
+        String password = null;
+        if (serverId != null) {
+            Server server = session.getSettings().getServer(serverId);
+            if (server == null) {
+                throw new MojoExecutionException("Cannot find server settings for '" + serverId + "'.");
+            }
+
+            // decrypt password
+            SettingsDecryptionResult result = settingsDecrypter.decrypt( new DefaultSettingsDecryptionRequest( server ) );
+            server = result.getServer();
+
+            user = server.getUsername();
+            password = server.getPassword();
+            if (user == null || password == null) {
+                throw new MojoExecutionException("Server settings for '" + serverId + "' has no user and/or password.");
+            }
+        }
+
+    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()), user, password);
     	WindowsExeSigner.Builder winExeSignerBuilder = WindowsExeSigner.builder(signer).logOn(getLog()).maxRetry(retryLimit).waitBeforeRetry(retryTimer, TimeUnit.SECONDS);
     	if (continueOnFail) {
     		winExeSignerBuilder.continueOnFail();
