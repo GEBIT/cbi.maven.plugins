@@ -10,7 +10,10 @@
  *******************************************************************************/
 package org.eclipse.cbi.webservice.signing.windows;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.cbi.util.PropertiesReader;
@@ -22,8 +25,8 @@ import net.jsign.timestamp.TimestampingMode;
 public class JSignProperties {
 
 	private static final long JSIGN_TIMEOUT_DEFAULT = TimeUnit.MINUTES.toSeconds(2);
-//	private static final String JSIGN_URL = "windows.jsign.url";
-//	private static final String JSIGN_DESCRIPTION = "windows.jsign.description";
+	private static final String JSIGN_URL = "windows.jsign.url";
+	private static final String JSIGN_DESCRIPTION = "windows.jsign.description";
 	private static final String JSIGN_TIMEOUT = "windows.jsign.timeout";
 	private static final String JSIGN_REPLACE = "windows.jsign.replace";
 	private static final String JSIGN_TS_AUTHORITY = "windows.jsign.tsa";
@@ -60,13 +63,25 @@ public class JSignProperties {
 		return propertiesReader.getPath(JSIGN_JAR);
 	}
 
-//	public String getURL() {
-//		return propertiesReader.getString(JSIGN_URL);
-//	}
-//
-//	public String getDescription() {
-//		return propertiesReader.getString(JSIGN_DESCRIPTION);
-//	}
+	public Optional<URI> getURL() {
+		String url = propertiesReader.getString(JSIGN_URL, "");
+		if (Strings.isNullOrEmpty(url)) {
+			return Optional.empty();
+		}
+		try {
+			return Optional.of(new URI(url));
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Property '" + JSIGN_URL + "' must be a valid URI (currently '" + url + "')", e);
+		}
+	}
+
+	public Optional<String> getDescription() {
+		String name = propertiesReader.getString(JSIGN_DESCRIPTION, "");
+		if (Strings.isNullOrEmpty(name)) {
+			return Optional.empty();
+		}
+		return Optional.of(name);
+	}
 
 	/**
 	 * Reads and returns the path to the keystore file.

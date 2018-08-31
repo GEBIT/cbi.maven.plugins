@@ -13,8 +13,11 @@ package org.eclipse.cbi.webservice.signing.windows;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.eclipse.cbi.util.PropertiesReader;
+
+import com.google.common.base.Strings;
 
 public class OSSLSigncodeProperties {
 
@@ -48,16 +51,23 @@ public class OSSLSigncodeProperties {
 		return propertiesReader.getFileContent(OSSLSIGNCODE_PKC12_PASSWORD);
 	}
 
-	public String getDescription() {
-		return propertiesReader.getString(OSSLSIGNCODE_DESCRIPTION);
+	public Optional<String> getDescription() {
+		String description = propertiesReader.getString(OSSLSIGNCODE_DESCRIPTION, "");
+		if (Strings.isNullOrEmpty(description)) {
+			return Optional.empty();
+		}
+		return Optional.of(description);
 	}
 
-	public URI getURI() {
-		String value = propertiesReader.getString(OSSLSIGNCODE_URL);
+	public Optional<URI> getURI() {
+		String value = propertiesReader.getString(OSSLSIGNCODE_URL, "");
+		if (Strings.isNullOrEmpty(value)) {
+			return Optional.empty();
+		}
 		try {
-			return new URI(value);
+			return Optional.of(new URI(value));
 		} catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Property '" + OSSLSIGNCODE_URL + "' must be a valid URI (currently '" + value + "')", e); 
+			throw new IllegalArgumentException("Property '" + OSSLSIGNCODE_URL + "' must be a valid URI (currently '" + value + "')", e);
 		}
 	}
 
@@ -66,7 +76,7 @@ public class OSSLSigncodeProperties {
 		try {
 			return new URI(value);
 		} catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Property '" + OSSLSIGNCODE_TIMESTAMPURL + "' must be a valid URI (currently '" + value + "')", e); 
+			throw new IllegalArgumentException("Property '" + OSSLSIGNCODE_TIMESTAMPURL + "' must be a valid URI (currently '" + value + "')", e);
 		}
 	}
 

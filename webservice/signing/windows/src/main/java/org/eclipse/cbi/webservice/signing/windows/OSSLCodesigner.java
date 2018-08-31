@@ -15,6 +15,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.cbi.common.util.Paths;
@@ -33,12 +34,12 @@ public abstract class OSSLCodesigner implements Codesigner {
 	private static Logger logger = LoggerFactory.getLogger(OSSLCodesigner.class);;
 
 	@Override
-	public void sign(Path file) throws IOException {
+	public void sign(Path file, String name, URI url) throws IOException {
 		Path out = null;
 		try {
 			out = Files.createTempFile(tempFolder(), TEMP_FILE_PREFIX, file.getFileName().toString());
 			StringBuffer output = new StringBuffer();
-			int osslsigncodeExitValue = processExecutor().exec(createCommand(file, out), output, timeout(), TimeUnit.SECONDS);
+			int osslsigncodeExitValue = processExecutor().exec(createCommand(file, out, name, url), output, timeout(), TimeUnit.SECONDS);
 			if (osslsigncodeExitValue != 0) {
 				throw new IOException(Joiner.on('\n').join(
 						"The '" + osslsigncode().toString() + "' command exited with value '" + osslsigncodeExitValue + "'",
@@ -57,17 +58,21 @@ public abstract class OSSLCodesigner implements Codesigner {
 		}
 	}
 
-	private ImmutableList<String> createCommand(Path in, Path out) {
-		return ImmutableList.<String>builder()
-				.add(osslsigncode().toString())
+	private ImmutableList<String> createCommand(Path in, Path out, String name, URI url) {
+		com.google.common.collect.ImmutableList.Builder<String> builder = ImmutableList.<String>builder();
+		builder.add(osslsigncode().toString())
 				.add("-pkcs12", pkcs12().toString())
 				.add("-pass", pkcs12Password())
-				.add("-n", description())
-				.add("-i", uri().toString())
 				.add("-t", timestampURI().toString())
 				.add("-in", in.toString())
-				.add("-out", out.toString())
-				.build();
+				.add("-out", out.toString());
+		if (name != null || description().isPresent()) {
+			builder.add("-n", name != null ? name : description().orElse(name));
+		}
+		if (url != null || uri().isPresent()) {
+			builder.add("-i", uri().orElse(url).toString());
+		}
+		return builder.build();
 	}
 
 	public static Builder builder() {
@@ -78,8 +83,8 @@ public abstract class OSSLCodesigner implements Codesigner {
 	abstract long timeout();
 	abstract Path pkcs12();
 	abstract String pkcs12Password();
-	abstract String description();
-	abstract URI uri();
+	abstract Optional<String> description();
+	abstract Optional<URI> uri();
 	abstract URI timestampURI();
 	abstract Path tempFolder();
 	abstract ProcessExecutor processExecutor();
@@ -96,9 +101,9 @@ public abstract class OSSLCodesigner implements Codesigner {
 
 		public abstract Builder pkcs12Password(String pkcs12Password);
 
-		public abstract Builder description(String description);
+		public abstract Builder description(Optional<String> description);
 
-		public abstract Builder uri(URI uri);
+		public abstract Builder uri(Optional<URI> uri);
 
 		public abstract Builder timestampURI(URI timestampURI);
 

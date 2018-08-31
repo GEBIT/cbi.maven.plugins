@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.URI;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -23,6 +24,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +46,8 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 	private static Logger logger = LoggerFactory.getLogger(JSignInternalCodesigner.class);;
 
 	@Override
-	public void sign(Path file) throws IOException {
-		PESigner signer = createSigner(file);
+	public void sign(Path file, String name, URI url) throws IOException {
+		PESigner signer = createSigner(file, name, url);
 
 		PEFile peFile = new PEFile(file.toFile());
 		logger.info("Adding Authenticode signature to " + file);
@@ -62,38 +64,9 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 		}
 	}
 
-	private PESigner createSigner(Path file) throws IOException {
+	private PESigner createSigner(Path file, String name, URI url) throws IOException {
 		PrivateKey privateKey;
 		Certificate[] chain;
-
-		/*
-		 * if (!Strings.isNullOrEmpty(httpProxyHost())) {
-		 * command.add("-J-Dhttp.proxyHost=" +
-		 * httpProxyHost()).add("-J-Dhttp.proxyPort=" + httpProxyPort()); }
-		 *
-		 * if (!Strings.isNullOrEmpty(httpProxyHost())) {
-		 * command.add("-J-Dhttps.proxyHost=" +
-		 * httpsProxyHost()).add("-J-Dhttps.proxyPort=" + httpsProxyPort()); }
-		 *
-		 * command.add("-tsaurl", timestampingAuthority().toString()) .add("-keystore",
-		 * keystore().toString()) .add("-storepass", keystorePassword());
-		 *
-		 * if (!Strings.isNullOrEmpty(keystoreType())) { command.add("-storetype",
-		 * keystoreType()); } if (!Strings.isNullOrEmpty(keystoreAlias())) {
-		 * command.add("-alias", keystoreAlias()); }
-		 *
-		 * if (!Strings.isNullOrEmpty(provider())) { command.add("-provider",
-		 * provider()); } if (!Strings.isNullOrEmpty(providerArg())) {
-		 * command.add("-providerArg", providerArg()); } if
-		 * (!Strings.isNullOrEmpty(digestalg())) { command.add("-alg", digestalg()); }
-		 * if (!Strings.isNullOrEmpty(certchain())) { command.add("-certfile",
-		 * certchain()); }
-		 *
-		 * // .add("-pkcs12", pkcs12().toString()) // .add("-pass", pkcs12Password()) //
-		 * .add("-n", description()) // .add("-i", uri().toString()) // .add("-t",
-		 * timestampURI().toString()) // .add("-in", in.toString()) // .add("-out",
-		 * out.toString()) command.add(file.toString());
-		 */
 
 		// some exciting parameter validation...
 		if ((keystore() == null || "NONE".equals(keystore().toString())) && keystoreType() == null) {
@@ -106,27 +79,26 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 
 			ClassLoader cl = ClassLoader.getSystemClassLoader();
 			Object obj = null;
-            try {
-            	Class<?> provClass;
-	            if (cl != null) {
-	                provClass = cl.loadClass(provider());
-	            } else {
-	                provClass = Class.forName(provider());
-	            }
-	            if (Strings.isNullOrEmpty(providerArg())) {
-	            	obj = provClass.newInstance();
-	            } else {
-	            	Constructor<?> c =
-	            			provClass.getConstructor(String.class);
-	            	obj = c.newInstance(providerArg());
-	            }
-            } catch (Exception ex) {
-            	throw new IOException("Failed to create " + provider(), ex);
-            }
-            if (!(obj instanceof Provider)) {
-                throw new IOException(provider() + " is not a Provider");
-            }
-            provider = (Provider)obj;
+			try {
+				Class<?> provClass;
+				if (cl != null) {
+					provClass = cl.loadClass(provider());
+				} else {
+					provClass = Class.forName(provider());
+				}
+				if (Strings.isNullOrEmpty(providerArg())) {
+					obj = provClass.newInstance();
+				} else {
+					Constructor<?> c = provClass.getConstructor(String.class);
+					obj = c.newInstance(providerArg());
+				}
+			} catch (Exception ex) {
+				throw new IOException("Failed to create " + provider(), ex);
+			}
+			if (!(obj instanceof Provider)) {
+				throw new IOException(provider() + " is not a Provider");
+			}
+			provider = (Provider) obj;
 		}
 
 		KeyStore ks = load(keystore() != null ? keystore().toFile() : null,
@@ -189,9 +161,7 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 //		}
 
 		// and now the actual work!
-		return new PESigner(chain, privateKey)
-//				.withProgramName(description())
-//				.withProgramURL(url())
+		PESigner signer = new PESigner(chain, privateKey)
 				.withDigestAlgorithm(DigestAlgorithm.of(digestalg()))
 				.withSignatureProvider(provider)
 				.withSignatureAlgorithm(sigalg)
@@ -200,9 +170,17 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 				.withTimestampingMode(timestampingMode() != null ? TimestampingMode.of(timestampingMode())
 						: TimestampingMode.AUTHENTICODE)
 				.withTimestampingRetries(timestampingRetries())
-				.withTimestampingRetryWait(timestampingRetryWait())
-				.withTimestampingAutority(
-						timestampingAuthority() != null ? timestampingAuthority().toString().split(",") : null);
+				.withTimestampingRetryWait(timestampingRetryWait());
+		if (name != null || description().isPresent()) {
+			signer.withProgramName(name != null ? name : description().get());
+		}
+		if (url != null || url().isPresent()) {
+			signer.withProgramURL(url != null ? url.toString() : url().toString());
+		}
+		if (timestampingAuthority() != null) {
+			signer.withTimestampingAutority(timestampingAuthority().toString().split(","));
+		}
+		return signer;
 	}
 
 	private KeyStore load(File keystore, String storetype, String storepass, Provider provider) throws IOException {
@@ -264,9 +242,9 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 		return new AutoValue_JSignInternalCodesigner.Builder();
 	}
 
-//	abstract String description();
-//
-//	abstract String url();
+	abstract Optional<String> description();
+
+	abstract Optional<URI> url();
 
 	abstract long timeout();
 
@@ -360,9 +338,9 @@ public abstract class JSignInternalCodesigner implements Codesigner {
 	public static abstract class Builder {
 		public abstract JSignInternalCodesigner build();
 
-//		public abstract Builder description(String description);
-//
-//		public abstract Builder url(String uri);
+		public abstract Builder description(Optional<String> description);
+
+		public abstract Builder url(Optional<URI> uri);
 
 		public abstract Builder replace(boolean replace);
 

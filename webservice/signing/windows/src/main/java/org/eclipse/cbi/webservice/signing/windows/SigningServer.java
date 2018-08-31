@@ -51,8 +51,7 @@ public class SigningServer {
 			if ("jsign".equalsIgnoreCase(properties.getString("windows.signer"))) {
 				final JSignProperties conf = new JSignProperties(properties);
 				codesigner = JSignCodesigner.builder()
-//						.description(conf.getDescription())
-//						.url(conf.getURL())
+						.processExecutor(new ProcessExecutor.BasicImpl())
 						.jsignjar(conf.getJsignjar())
 						.keystore(conf.getKeystore())
 						.keystoreAlias(conf.getKeystoreAlias())
@@ -68,15 +67,14 @@ public class SigningServer {
 						.replace(conf.getReplace())
 						.digestalg(conf.getDigestalg())
 						.certfile(conf.getCertfile())
-						.processExecutor(new ProcessExecutor.BasicImpl())
+						.description(conf.getDescription())
+						.url(conf.getURL())
 						.build();
 
 			} else if ("jsign-internal".equalsIgnoreCase(properties.getString("windows.signer"))) {
 
 				final JSignInternalProperties conf = new JSignInternalProperties(properties);
 				codesigner = JSignInternalCodesigner.builder()
-//						.description(conf.getDescription())
-//						.url(conf.getURL())
 						.keystore(conf.getKeystore())
 						.keystoreAlias(conf.getKeystoreAlias())
 						.keystorePassword(conf.getKeystorePassword())
@@ -96,6 +94,8 @@ public class SigningServer {
 						.sigalg(conf.getSigalg())
 						.digestalg(conf.getDigestalg())
 						.certchain(conf.getCertchain())
+						.description(conf.getDescription())
+						.url(conf.getURL())
 						.build();
 
 			} else {
@@ -103,15 +103,15 @@ public class SigningServer {
 				final OSSLSigncodeProperties conf = new OSSLSigncodeProperties(properties);
 
 				codesigner = OSSLCodesigner.builder()
+						.processExecutor(new ProcessExecutor.BasicImpl())
 						.osslsigncode(conf.getOSSLSigncode())
 						.timeout(conf.getTimeout())
 						.pkcs12(conf.getPKCS12())
 						.pkcs12Password(conf.getPKCS12Password())
-						.description(conf.getDescription())
-						.uri(conf.getURI())
 						.timestampURI(conf.getTimestampURI())
 						.tempFolder(tempFolder)
-						.processExecutor(new ProcessExecutor.BasicImpl())
+						.description(conf.getDescription())
+						.uri(conf.getURI())
 						.build();
 			}
 

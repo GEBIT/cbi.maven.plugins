@@ -11,6 +11,8 @@
 package org.eclipse.cbi.webservice.signing.windows;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 
 import javax.servlet.ServletException;
@@ -31,6 +33,8 @@ public abstract class SigningServlet extends HttpServlet {
 
 	private static final long serialVersionUID = -7811488782781658819L;
 
+	private static final String NAME_PART_NAME = "name";
+	private static final String URL_PART_NAME = "url";
 	private static final String FILE_PART_NAME = "file";
 	private static final String PORTABLE_EXECUTABLE_MEDIA_TYPE = "application/vnd.microsoft.portable-executable";
 	private static final String TEMP_FILE_PREFIX = SigningServlet.class.getSimpleName() + "-";
@@ -52,11 +56,25 @@ public abstract class SigningServlet extends HttpServlet {
 	}
 
 	private void doSign(RequestFacade requestFacade, ResponseFacade responseFacade) throws IOException, ServletException {
+
 		if (requestFacade.hasPart(FILE_PART_NAME)) {
 			String submittedFileName = requestFacade.getSubmittedFileName(FILE_PART_NAME).get();
-			if (submittedFileName.endsWith(".exe")) {
+
+			String name = submittedFileName;
+			URI url = null;
+			if (requestFacade.hasPart(NAME_PART_NAME)) {
+				name = requestFacade.getPartText(NAME_PART_NAME).get();
+			}
+			if (requestFacade.hasPart(URL_PART_NAME)) {
+				try {
+					url = new URI(requestFacade.getPartText(URL_PART_NAME).get());
+				} catch (URISyntaxException e) {
+					throw new IOException("Invalid program url passed: " + requestFacade.getParameter(URL_PART_NAME).get());
+				}
+			}
+			if (submittedFileName.endsWith(".exe") || submittedFileName.endsWith(".msi")) {
 				Path executable = requestFacade.getPartPath(FILE_PART_NAME, TEMP_FILE_PREFIX).get();
-				codesigner().sign(executable);
+				codesigner().sign(executable, name, url);
 				responseFacade.replyWithFile(PORTABLE_EXECUTABLE_MEDIA_TYPE, submittedFileName, executable);
 			} else {
 				responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "Submitted '" + FILE_PART_NAME + "' '" + submittedFileName + "' must ends with '.exe' ");

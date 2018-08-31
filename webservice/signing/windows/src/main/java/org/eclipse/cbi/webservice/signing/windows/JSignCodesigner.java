@@ -11,8 +11,10 @@
 package org.eclipse.cbi.webservice.signing.windows;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.cbi.common.util.Paths;
@@ -31,11 +33,11 @@ public abstract class JSignCodesigner implements Codesigner {
 	private static Logger logger = LoggerFactory.getLogger(JSignCodesigner.class);;
 
 	@Override
-	public void sign(Path file) throws IOException {
+	public void sign(Path file, String name, URI url) throws IOException {
 		Path out = null;
 		try {
 			StringBuffer output = new StringBuffer();
-			int jsignExitValue = processExecutor().exec(createCommand(file), output, timeout(), TimeUnit.SECONDS);
+			int jsignExitValue = processExecutor().exec(createCommand(file, name, url), output, timeout(), TimeUnit.SECONDS);
 			if (jsignExitValue != 0) {
 				throw new IOException(Joiner.on('\n').join(
 						"The '" + jsignjar().toString() + "' command exited with value '" + jsignExitValue + "'",
@@ -53,7 +55,7 @@ public abstract class JSignCodesigner implements Codesigner {
 		}
 	}
 
-	private ImmutableList<String> createCommand(Path file) {
+	private ImmutableList<String> createCommand(Path file, String name, URI url) {
 		ImmutableList.Builder<String> builder = ImmutableList.<String>builder();
 		builder.add("java")
 				.add("-jar")
@@ -92,8 +94,13 @@ public abstract class JSignCodesigner implements Codesigner {
 		if (replace()) {
 			builder.add("--replace");
 		}
+		if (name != null || description().isPresent()) {
+			builder.add("--name").add(name != null ? name : description().get());
+		}
+		if (url != null || url().isPresent()) {
+			builder.add("--url").add(url != null ? url.toString() : url().get().toString());
+		}
 
-		// -s D:\projects\opensc.conf --storetype PKCS11 -a "Cardholder certificate" -storepass ko1991 -c D:\projects\gebit_cert.pem -t http://timestamp.comodoca.com/authenticode --replace D:\projects\gebit-build-master\additional-classpath-maven-plugin\target\bin\win32\win32\x86_64\eclipsec.exe
 		return builder.add(file.toString()).build();
 	}
 
@@ -107,32 +114,36 @@ public abstract class JSignCodesigner implements Codesigner {
 	 */
 	abstract Path jsignjar();
 
+	abstract Optional<String> description();
 
-		/**
-		 * Returns the keystore file, or the SunPKCS11 configuration file
-		 *
-		 * @return the keystore file, or the SunPKCS11 configuration file
-		 */
-		abstract Path keystore();
-
-		/**
-		 * Returns the path to the file storing the keystore password
-		 *
-		 * @return the path to the file storing the keystore password
-		 */
-		abstract String keystorePassword();
+	abstract Optional<URI> url();
 
 
-		/**
-		 * Returns the type of the keystore:
-		 * <ul>
-		 * <li>JKS: Java keystore (.jks files)</li>
-		 * <li>PKCS12: Standard PKCS#12 keystore (.p12 or .pfx files)</li>
-		 * <li>PKCS11: PKCS#11 hardware token</li>
-		 *
-		 * @return the type of the keystore
-		 */
-		abstract String keystoreType();
+	/**
+	 * Returns the keystore file, or the SunPKCS11 configuration file
+	 *
+	 * @return the keystore file, or the SunPKCS11 configuration file
+	 */
+	abstract Path keystore();
+
+	/**
+	 * Returns the path to the file storing the keystore password
+	 *
+	 * @return the path to the file storing the keystore password
+	 */
+	abstract String keystorePassword();
+
+
+	/**
+	 * Returns the type of the keystore:
+	 * <ul>
+	 * <li>JKS: Java keystore (.jks files)</li>
+	 * <li>PKCS12: Standard PKCS#12 keystore (.p12 or .pfx files)</li>
+	 * <li>PKCS11: PKCS#11 hardware token</li>
+	 *
+	 * @return the type of the keystore
+	 */
+	abstract String keystoreType();
 
 	/**
 	 * Returns the alias of the certificate used for signing in the keystore
@@ -214,6 +225,10 @@ public abstract class JSignCodesigner implements Codesigner {
 		public abstract Builder jsignjar(Path jsignjar);
 
 		public abstract Builder replace(boolean replace);
+
+		public abstract Builder description(Optional<String> description);
+
+		public abstract Builder url(Optional<URI> uri);
 
 		/**
 		 * Sets the path to the keystore file.

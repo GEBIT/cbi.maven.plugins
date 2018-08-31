@@ -18,10 +18,14 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -174,6 +178,22 @@ public class SignMojo extends AbstractMojo {
     private int retryTimer;
 
     /**
+     * Application name to be added to the signature
+     *
+     * @parameter property="cbi.winsigner.name" default-value="false"
+     * @since 1.2.0
+     */
+    private String name;
+
+    /**
+     * Application url to be added to the signature
+     *
+     * @parameter property="cbi.winsigner.url" default-value="false"
+     * @since 1.2.0
+     */
+    private String url;
+
+    /**
      * Skips the execution of this plugin
      *
      * @parameter property="cbi.winsigner.skip" default-value="false"
@@ -218,7 +238,14 @@ public class SignMojo extends AbstractMojo {
             }
         }
 
-    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()), user, password);
+        List<NameValuePair> additionalParams = new ArrayList<>();
+        if (name != null) {
+        	additionalParams.add(new BasicNameValuePair("name", name));
+        }
+        if (url != null ) {
+        	additionalParams.add(new BasicNameValuePair("url", url));
+        }
+    	final HttpPostFileSender signer = new ApacheHttpClientPostFileSender(URI.create(signerUrl), new MavenLogger(getLog()), user, password, additionalParams.toArray(new NameValuePair[additionalParams.size()]));
     	WindowsExeSigner.Builder winExeSignerBuilder = WindowsExeSigner.builder(signer).logOn(getLog()).maxRetry(retryLimit).waitBeforeRetry(retryTimer, TimeUnit.SECONDS);
     	if (continueOnFail) {
     		winExeSignerBuilder.continueOnFail();

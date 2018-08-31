@@ -11,6 +11,7 @@
 package org.eclipse.cbi.webservice.signing.windows;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 
 /**
@@ -24,5 +25,5 @@ public interface Codesigner {
 	 * @param file the file to be signed
 	 * @throws IOException if anything goes wrong
 	 */
-	public void sign(Path file) throws IOException;
+	public void sign(Path file, String name, URI url) throws IOException;
 }
