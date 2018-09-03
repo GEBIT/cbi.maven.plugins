@@ -66,7 +66,7 @@ public abstract class JSignCodesigner implements Codesigner {
 			builder.add("--keystore").add(keystore().toString());
 			builder.add("--alias").add(keystoreAlias());
 			if (!Strings.isNullOrEmpty(keystorePassword().toString())) {
-				builder.add("--storepass").add(keystorePassword());
+				builder.add("--storepass:file").add(keystorePassword().toString());
 			}
 			if (!Strings.isNullOrEmpty(keystoreType().toString())) {
 				builder.add("--storetype").add(keystoreType());
@@ -75,7 +75,7 @@ public abstract class JSignCodesigner implements Codesigner {
 		if (!Strings.isNullOrEmpty(keyfile().toString())) {
 			builder.add("--keyfile").add(keyfile().toString());
 			if (!Strings.isNullOrEmpty(keyfilePassword().toString())) {
-				builder.add("--keypass").add(keyfilePassword());
+				builder.add("--keypass:file").add(keyfilePassword().toString());
 			}
 		}
 		if (!Strings.isNullOrEmpty(certfile().toString())) {
@@ -131,7 +131,7 @@ public abstract class JSignCodesigner implements Codesigner {
 	 *
 	 * @return the path to the file storing the keystore password
 	 */
-	abstract String keystorePassword();
+	abstract Path keystorePassword();
 
 
 	/**
@@ -162,7 +162,7 @@ public abstract class JSignCodesigner implements Codesigner {
 	 *         using a keystore, this parameter can be omitted if the keystore
 	 *         shares the same password.
 	 */
-	abstract String keyfilePassword();
+	abstract Path keyfilePassword();
 
 	/**
 	 * Returns the file containing the private key. PEM and PVK files are
@@ -242,7 +242,7 @@ public abstract class JSignCodesigner implements Codesigner {
 		 *
 		 * @return this builder for daisy-chaining.
 		 */
-		public abstract Builder keystorePassword(String keystorePassword);
+		public abstract Builder keystorePassword(Path keystorePassword);
 
 		/**
 		 * Sets the alias name of the key in the keystore.
@@ -279,7 +279,7 @@ public abstract class JSignCodesigner implements Codesigner {
 
 		public abstract Builder keyfile(Path keyfile);
 
-		public abstract Builder keyfilePassword(String keypass);
+		public abstract Builder keyfilePassword(Path keypass);
 
 		public abstract Builder processExecutor(ProcessExecutor processExecutor);
 	}

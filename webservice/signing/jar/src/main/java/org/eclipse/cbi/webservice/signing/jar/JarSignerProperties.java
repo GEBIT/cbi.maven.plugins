@@ -93,8 +93,8 @@ public class JarSignerProperties {
 	 *
 	 * @return the path to the file containing the password of the keystore.
 	 */
-	public String getKeystorePassword() {
-		return propertiesReader.getFileContent(JARSIGNER_KEYSTORE_PASSWORD);
+	public Path getKeystorePassword() {
+		return propertiesReader.getRegularFile(JARSIGNER_KEYSTORE_PASSWORD);
 	}
 
 	/**

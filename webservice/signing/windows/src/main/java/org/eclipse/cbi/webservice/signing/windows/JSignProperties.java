@@ -122,8 +122,8 @@ public class JSignProperties {
 	 *
 	 * @return the path to the file containing the password of the keystore.
 	 */
-	public String getKeystorePassword() {
-		return propertiesReader.getFileContent(JSIGN_KEYSTORE_PASSWORD);
+	public Path getKeystorePassword() {
+		return propertiesReader.getRegularFile(JSIGN_KEYSTORE_PASSWORD);
 	}
 
 	/**
@@ -179,10 +179,11 @@ public class JSignProperties {
 	 *
 	 * @return the path to the file containing the password of the keyfile.
 	 */
-	public String getKeyfilePassword() {
+	public Path getKeyfilePassword() {
 		if (Strings.isNullOrEmpty(propertiesReader.getString(JSIGN_KEYFILE_PASSWORD, ""))) {
-			return "";
+			// is acceptable here
+			return propertiesReader.getPath(JSIGN_KEYSTORE);
 		}
-		return propertiesReader.getFileContent(JSIGN_KEYFILE_PASSWORD);
+		return propertiesReader.getRegularFile(JSIGN_KEYFILE_PASSWORD);
 	}
 }

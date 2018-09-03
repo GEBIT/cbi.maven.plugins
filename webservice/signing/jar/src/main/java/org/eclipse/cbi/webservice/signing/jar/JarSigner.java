@@ -49,7 +49,7 @@ public abstract class JarSigner {
 	 *
 	 * @return the path to the file storing the keystore password
 	 */
-	abstract String keystorePassword();
+	abstract Path keystorePassword();
 
 	/**
 	 * Returns the alias name of the key in the keystore
@@ -164,7 +164,7 @@ public abstract class JarSigner {
 		 *
 		 * @return this builder for daisy-chaining.
 		 */
-		public abstract Builder keystorePassword(String keystorePassword);
+		public abstract Builder keystorePassword(Path keystorePassword);
 
 		/**
 		 * Sets the alias name of the key in the keystore.
@@ -271,7 +271,7 @@ public abstract class JarSigner {
 		command.add("-tsa", timestampingAuthority().toString())
 			.add("-verbose")
 			.add("-keystore", keystore().toString())
-			.add("-storepass", keystorePassword());
+			.add("-storepass:file", keystorePassword().toAbsolutePath().toString());
 
 		if (!Strings.isNullOrEmpty(keystoreType())) {
 			command.add("-storetype", keystoreType());
