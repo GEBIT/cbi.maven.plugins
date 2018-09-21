@@ -58,7 +58,12 @@ public class JarSigner {
 	 * Jar file extension.
 	 */
 	private static final String DOT_JAR_GLOB_PATTERN = "glob:**.jar";
-	
+
+	/**
+	 * War file extension.
+	 */
+	private static final String DOT_WAR_GLOB_PATTERN = "glob:**.war";
+
 	/**
 	 * The log on which feedback will be provided.
 	 */
@@ -170,9 +175,10 @@ public class JarSigner {
 		if (file == null || !Files.isRegularFile(file) || !Files.isReadable(file)) {
 			log.debug("Could not read file '" + file + "', it will not be signed");
 			ret = false;
-		} else if (!file.getFileSystem().getPathMatcher(DOT_JAR_GLOB_PATTERN).matches(file)) {
+		} else if (!file.getFileSystem().getPathMatcher(DOT_JAR_GLOB_PATTERN).matches(file)
+				&& !file.getFileSystem().getPathMatcher(DOT_WAR_GLOB_PATTERN).matches(file)) {
 			if (currentDepth == 0) {
-				log.debug("Extension of file '" + file + "' is not 'jar', it will not be signed");
+				log.debug("Extension of file '" + file + "' is not 'jar' or 'war', it will not be signed");
 			}
 			ret = false;
 		} else if (isDisabledInEclipseInf(file)) {
