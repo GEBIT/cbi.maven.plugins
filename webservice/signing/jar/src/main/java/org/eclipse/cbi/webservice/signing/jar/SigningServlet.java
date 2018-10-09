@@ -54,12 +54,12 @@ public abstract class SigningServlet extends HttpServlet {
 	private void doSign(final RequestFacade requestFacade, final ResponseFacade responseFacade) throws IOException, ServletException {
 		if (requestFacade.hasPart(FILE_PART_NAME)) {
 			String submittedFileName = requestFacade.getSubmittedFileName(FILE_PART_NAME).get();
-			if (submittedFileName.endsWith(".jar")) {
+			if (submittedFileName.endsWith(".jar") || submittedFileName.endsWith(".war")) {
 				Path unsignedJar = requestFacade.getPartPath(FILE_PART_NAME, TEMP_FILE_PREFIX).get();
 				Path signedJar = jarSigner().signJar(unsignedJar);
 				responseFacade.replyWithFile(JAR_CONTENT_TYPE, submittedFileName, signedJar);
 			} else {
-				responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "Submitted '" + FILE_PART_NAME + "' '" + submittedFileName + "' must ends with '.jar' ");
+				responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "Submitted '" + FILE_PART_NAME + "' '" + submittedFileName + "' must ends with '.jar' or '.war'");
 			}
 		} else {
 			responseFacade.replyPlain(HttpServletResponse.SC_BAD_REQUEST, "POST request must contain a part named '" + FILE_PART_NAME + "'");
