@@ -100,6 +100,12 @@ public abstract class JSignCodesigner implements Codesigner {
 		if (url != null || url().isPresent()) {
 			builder.add("--url").add(url != null ? url.toString() : url().get().toString());
 		}
+		if (!Strings.isNullOrEmpty(timestampingAuthority())) {
+			builder.add("--tsaurl").add(timestampingAuthority());
+			if (!Strings.isNullOrEmpty(timestampingMode())) {
+				builder.add("--tsmode").add(timestampingMode());
+			}
+		}
 
 		return builder.add(file.toString()).build();
 	}
