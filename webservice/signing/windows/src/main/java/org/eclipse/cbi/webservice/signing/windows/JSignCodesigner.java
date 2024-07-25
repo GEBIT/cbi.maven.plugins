@@ -66,7 +66,7 @@ public abstract class JSignCodesigner implements Codesigner {
 			builder.add("--keystore").add(keystore().toString());
 			builder.add("--alias").add(keystoreAlias());
 			if (!Strings.isNullOrEmpty(keystorePassword().toString())) {
-				builder.add("--storepass:file").add(keystorePassword().toString());
+				builder.add("--storepass").add("file:" + keystorePassword().toString());
 			}
 			if (!Strings.isNullOrEmpty(keystoreType().toString())) {
 				builder.add("--storetype").add(keystoreType());
@@ -75,7 +75,7 @@ public abstract class JSignCodesigner implements Codesigner {
 		if (!Strings.isNullOrEmpty(keyfile().toString())) {
 			builder.add("--keyfile").add(keyfile().toString());
 			if (!Strings.isNullOrEmpty(keyfilePassword().toString())) {
-				builder.add("--keypass:file").add(keyfilePassword().toString());
+				builder.add("--keypass").add("file:" + keyfilePassword().toString());
 			}
 		}
 		if (!Strings.isNullOrEmpty(certfile().toString())) {
