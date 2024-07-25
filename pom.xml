@@ -54,8 +54,8 @@
   </scm>
 
   <properties>
-    <minimum-maven-version>3.1.1</minimum-maven-version>
-    <apache-httpclient-version>4.3.3</apache-httpclient-version>
+    <minimum-maven-version>3.6.2</minimum-maven-version>
+    <apache-httpclient-version>4.5.14</apache-httpclient-version>
     <cbi-common-version>1.2.0-SNAPSHOT</cbi-common-version>
   </properties>
 
@@ -267,7 +267,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-plugin-plugin</artifactId>
-          <version>3.3</version>
+          <version>3.9.0</version>
             <configuration>
               <requirements>
                 <maven>${minimum-maven-version}</maven>
@@ -286,9 +286,14 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>33.2.1-jre</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.21</version>
+        <version>1.26.2</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -344,7 +349,7 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
-        <version>9.4.8.v20180619</version>
+        <version>9.4.19.v20190610</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
