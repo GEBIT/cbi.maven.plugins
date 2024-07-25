@@ -4,7 +4,7 @@
 
 	<groupId>pascal</groupId>
 	<artifactId>dmgdemo</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.2.0-gebit6</version>
 	<packaging>jar</packaging>
 
 	<name>foo</name>
@@ -19,7 +19,7 @@
 			<plugin>
 				<groupId>org.eclipse.cbi.maven.plugins</groupId>
 				<artifactId>eclipse-dmg-packager</artifactId>
-				<version>1.2.0-SNAPSHOT</version>
+				<version>1.2.0-gebit6</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
