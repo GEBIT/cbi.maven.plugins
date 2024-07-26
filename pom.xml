@@ -84,7 +84,9 @@
   </distributionManagement>
 
   <modules>
+<!--
     <module>checkstyle</module>
+-->
     <module>common</module>
 
     <!-- maven-plugins submodules If you add something in there, think about
